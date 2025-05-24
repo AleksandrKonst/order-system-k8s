@@ -1,0 +1,36 @@
+replicaCount: 1
+
+image:
+  repository: processing-orders-api
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: ClusterIP
+  port: 80
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+env:
+  ASPNETCORE_ENVIRONMENT: Production
+
+config:
+  appSettings:
+    Logging:
+      LogLevel:
+        Default: Information
+        Microsoft.AspNetCore: Warning
+    AllowedHosts: "*"
+    PromotionsGrpcService:
+      Address: http://promotions-service:8080
+    KafkaSettings:
+      BootstrapServers: kafka:19092
+      OrdersTopic: orders
+      OrdersDiscountTopic: orders-discounts
+      GroupId: processing-orders

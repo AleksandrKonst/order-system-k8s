@@ -1,0 +1,22 @@
+apiVersion: v2
+name: order-system
+description: A Helm chart for Order System Microservices
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+dependencies:
+  - name: postgres
+    version: 0.1.0
+    repository: "file://charts/postgres"
+  - name: kafka
+    version: 0.1.0
+    repository: "file://charts/kafka"
+  - name: processing-orders
+    version: 0.1.0
+    repository: "file://charts/processing-orders"
+  - name: promotions
+    version: 0.1.0
+    repository: "file://charts/promotions"
+  - name: mailings
+    version: 0.1.0
+    repository: "file://charts/mailings"
