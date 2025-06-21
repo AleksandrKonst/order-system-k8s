@@ -1,0 +1,27 @@
+{{- if .Values.processingOrders.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: processing-orders-api-stable
+  namespace: {{ .Values.global.namespace }}
+spec:
+  selector:
+    app: processing-orders-api
+  ports:
+  - port: {{ .Values.processingOrders.service.port }}
+    targetPort: 80
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: processing-orders-api-canary
+  namespace: {{ .Values.global.namespace }}
+spec:
+  selector:
+    app: processing-orders-api
+  ports:
+  - port: {{ .Values.processingOrders.service.port }}
+    targetPort: 80
+    protocol: TCP
+{{- end }}

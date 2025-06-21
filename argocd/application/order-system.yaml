@@ -1,0 +1,42 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: order-system
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: order-system
+spec:
+  project: default
+  
+  source:
+    repoURL: https://github.com/AleksandrKonst/order-system-k8s
+    targetRevision: HEAD
+    path: helm-charts/order-system
+    helm:
+      valueFiles:
+        - values.yaml
+      parameters:
+        - name: processingOrders.image.tag
+          value: "latest"
+        - name: mailings.image.tag  
+          value: "latest"
+        - name: promotions.image.tag
+          value: "latest"
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: order-system
+  
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+                 maxDuration: 3m

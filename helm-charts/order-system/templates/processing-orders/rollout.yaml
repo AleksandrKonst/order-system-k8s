@@ -1,0 +1,57 @@
+{{- if .Values.processingOrders.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: processing-orders-api
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: {{ .Values.processingOrders.replicaCount }}
+  selector:
+    matchLabels:
+      app: processing-orders-api
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.processingOrders.vault.enabled }}
+        vault.security.banzaicloud.io/vault-addr: "http://vault:8200"
+        vault.security.banzaicloud.io/vault-path: "{{ .Values.processingOrders.vault.path }}"
+        vault.security.banzaicloud.io/vault-role: "{{ .Values.processingOrders.vault.role }}"
+        vault.security.banzaicloud.io/vault-skip-verify: "true"
+        {{- end }}
+      labels:
+        app: processing-orders-api
+    spec:
+      containers:
+      - name: processing-orders-api
+        image: "{{ .Values.global.imageRegistry }}/{{ .Values.processingOrders.image.repository }}:{{ .Values.processingOrders.image.tag }}"
+        ports:
+        - containerPort: 80
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: ASPNETCORE_URLS
+          value: "http://+:80"
+        - name: Kafka__BootstrapServers
+          value: "kafka:19092"
+        {{- if .Values.processingOrders.vault.enabled }}
+        - name: ConnectionStrings__OrdersDb
+          value: "vault:order-system/data/processing-orders#ConnectionStrings.OrdersDb"
+        {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 80
+          initialDelaySeconds: 5
+  {{- if .Values.processingOrders.rollout.enabled }}
+  strategy:
+    canary:
+      {{- toYaml .Values.processingOrders.rollout.strategy.canary | nindent 6 }}
+      canaryService: processing-orders-api-canary
+      stableService: processing-orders-api-stable
+  {{- end }}
+{{- end }}

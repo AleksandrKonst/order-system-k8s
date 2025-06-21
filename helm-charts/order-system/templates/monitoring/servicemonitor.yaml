@@ -1,0 +1,36 @@
+{{- if .Values.monitoring.prometheus.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: order-system-metrics
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: order-system
+spec:
+  selector:
+    matchLabels:
+      app: processing-orders-api
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: nginx-ingress-metrics
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: nginx-ingress
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ingress-nginx
+  namespaceSelector:
+    matchNames:
+    - ingress-nginx
+  endpoints:
+  - port: prometheus
+    path: /metrics
+    interval: 30s
+{{- end }}

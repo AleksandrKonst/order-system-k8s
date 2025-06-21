@@ -1,0 +1,21 @@
+{{- if and .Values.processingOrders.enabled .Values.processingOrders.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: processing-orders-api
+  namespace: {{ .Values.global.namespace }}
+  annotations:
+    kubernetes.io/ingress.class: {{ .Values.processingOrders.ingress.className }}
+spec:
+  rules:
+  - host: {{ .Values.processingOrders.ingress.host }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: processing-orders-api-stable
+            port:
+              number: {{ .Values.processingOrders.service.port }}
+{{- end }}

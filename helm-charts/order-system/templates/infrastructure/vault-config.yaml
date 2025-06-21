@@ -1,0 +1,26 @@
+{{- if .Values.vault.enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vault-secrets
+  namespace: {{ .Values.global.namespace }}
+type: Opaque
+data:
+  # Строки подключения к БД (base64 encoded)
+  processing-orders-db: {{ "Host=postgres;Database=ordersdb;Username=postgres;Password=postgres;" | b64enc }}
+  mailings-db: {{ "Host=postgres;Database=ordersdb;Username=postgres;Password=postgres" | b64enc }}
+  promotions-db: {{ "postgres://postgres:postgres@postgres:5432/ordersdb?sslmode=disable" | b64enc }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vault-init-script
+  namespace: {{ .Values.global.namespace }}
+data:
+  init.sh: |
+    #!/bin/bash
+    # Инициализация секретов в Vault
+    vault kv put secret/order-system/processing-orders ConnectionStrings.OrdersDb="Host=postgres;Database=ordersdb;Username=postgres;Password=postgres;"
+    vault kv put secret/order-system/mailings POSTGRES_CONNECTION_STRING="Host=postgres;Database=ordersdb;Username=postgres;Password=postgres"
+    vault kv put secret/order-system/promotions POSTGRES_CONNECTION_STRING="postgres://postgres:postgres@postgres:5432/ordersdb?sslmode=disable"
+{{- end }}
