@@ -1,0 +1,67 @@
+{{- if .Values.databaseMigrator.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: database-migrator
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: database-migrator
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.vault.enabled }}
+        vault.security.banzaicloud.io/vault-addr: "http://vault:8200"
+        vault.security.banzaicloud.io/vault-path: "secret/order-system"
+        vault.security.banzaicloud.io/vault-role: "order-system"
+        vault.security.banzaicloud.io/vault-skip-verify: "true"
+        {{- end }}
+      labels:
+        app: database-migrator
+    spec:
+      restartPolicy: {{ .Values.databaseMigrator.job.restartPolicy }}
+      initContainers:
+      - name: wait-for-postgres
+        image: postgres:15
+        command:
+        - sh
+        - -c
+        - |
+          until pg_isready -h postgres -p 5432 -U postgres; do
+            echo "Waiting for postgres..."
+            sleep 2
+          done
+          echo "PostgreSQL is ready!"
+      - name: wait-for-kafka
+        image: confluentinc/cp-kafka:latest
+        command:
+        - sh
+        - -c
+        - |
+          until kafka-topics --bootstrap-server kafka:19092 --list; do
+            echo "Waiting for kafka..."
+            sleep 2
+          done
+          echo "Kafka is ready!"
+      containers:
+      - name: database-migrator
+        image: "{{ .Values.global.imageRegistry }}/{{ .Values.databaseMigrator.image.repository }}:{{ .Values.databaseMigrator.image.tag }}"
+        env:
+        {{- if .Values.vault.enabled }}
+        - name: ConnectionStrings__OrdersDb
+          value: "vault:order-system/data/processing-orders#ConnectionStrings.OrdersDb"
+        {{- else }}
+        - name: ConnectionStrings__OrdersDb
+          value: "Host=postgres;Database=ordersdb;Username=postgres;Password=postgres;"
+        {{- end }}
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "kafka:19092"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+{{- end }} 

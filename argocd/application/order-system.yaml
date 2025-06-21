@@ -16,11 +16,15 @@ spec:
       valueFiles:
         - values.yaml
       parameters:
+        - name: global.imageRegistry
+          value: "aleksandrkonst"
         - name: processingOrders.image.tag
           value: "latest"
         - name: mailings.image.tag  
           value: "latest"
         - name: promotions.image.tag
+          value: "latest"
+        - name: databaseMigrator.image.tag
           value: "latest"
   
   destination:

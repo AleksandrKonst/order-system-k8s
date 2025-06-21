@@ -1,26 +1,103 @@
 {{- if .Values.vault.enabled }}
-apiVersion: v1
-kind: Secret
-metadata:
-  name: vault-secrets
-  namespace: {{ .Values.global.namespace }}
-type: Opaque
-data:
-  # Строки подключения к БД (base64 encoded)
-  processing-orders-db: {{ "Host=postgres;Database=ordersdb;Username=postgres;Password=postgres;" | b64enc }}
-  mailings-db: {{ "Host=postgres;Database=ordersdb;Username=postgres;Password=postgres" | b64enc }}
-  promotions-db: {{ "postgres://postgres:postgres@postgres:5432/ordersdb?sslmode=disable" | b64enc }}
----
+# Bank-Vaults Webhook Configuration
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: vault-init-script
+  name: vault-webhook-config
   namespace: {{ .Values.global.namespace }}
 data:
-  init.sh: |
-    #!/bin/bash
-    # Инициализация секретов в Vault
-    vault kv put secret/order-system/processing-orders ConnectionStrings.OrdersDb="Host=postgres;Database=ordersdb;Username=postgres;Password=postgres;"
-    vault kv put secret/order-system/mailings POSTGRES_CONNECTION_STRING="Host=postgres;Database=ordersdb;Username=postgres;Password=postgres"
-    vault kv put secret/order-system/promotions POSTGRES_CONNECTION_STRING="postgres://postgres:postgres@postgres:5432/ordersdb?sslmode=disable"
+  vault-addr: "http://vault:8200"
+  vault-path: "secret"
+  vault-role: "order-system"
+---
+# Vault Auth Role
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vault-auth-config
+  namespace: {{ .Values.global.namespace }}
+data:
+  auth.hcl: |
+    # Kubernetes auth backend config
+    auth "kubernetes" {
+      role "order-system" {
+        bound_service_account_names = ["default"]
+        bound_service_account_namespaces = ["{{ .Values.global.namespace }}"]
+        policies = ["order-system-policy"]
+        ttl = "1h"
+      }
+    }
+    
+    # Policy for order-system
+    policy "order-system-policy" {
+      rule {
+        path "secret/data/order-system/*" {
+          capabilities = ["read"]
+        }
+      }
+    }
+---
+# Vault initialization Job
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vault-init
+  namespace: {{ .Values.global.namespace }}
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: vault-init
+        image: vault:1.13.1
+        env:
+        - name: VAULT_ADDR
+          value: "http://vault:8200"
+        - name: VAULT_TOKEN
+          value: "root"
+        command:
+        - sh
+        - -c
+        - |
+          # Wait for Vault to be ready
+          until vault status; do
+            echo "Waiting for vault..."
+            sleep 5
+          done
+          
+          # Enable KV secrets engine
+          vault secrets enable -version=2 -path=secret kv || true
+          
+          # Store database connection strings
+          vault kv put secret/order-system/processing-orders \
+            ConnectionStrings.OrdersDb="Host=postgres;Database=ordersdb;Username=postgres;Password=postgres;"
+          
+          vault kv put secret/order-system/mailings \
+            POSTGRES_CONNECTION_STRING="Host=postgres;Database=ordersdb;Username=postgres;Password=postgres;"
+          
+          vault kv put secret/order-system/promotions \
+            POSTGRES_CONNECTION_STRING="postgres://postgres:postgres@postgres:5432/ordersdb?sslmode=disable"
+          
+          # Enable Kubernetes auth
+          vault auth enable kubernetes || true
+          
+          # Configure Kubernetes auth
+          vault write auth/kubernetes/config \
+            token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
+            kubernetes_host="https://$KUBERNETES_PORT_443_TCP_ADDR:443" \
+            kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          
+          # Create policy
+          vault policy write order-system-policy - <<EOF
+          path "secret/data/order-system/*" {
+            capabilities = ["read"]
+          }
+          EOF
+          
+          # Create role
+          vault write auth/kubernetes/role/order-system \
+            bound_service_account_names=default \
+            bound_service_account_namespaces={{ .Values.global.namespace }} \
+            policies=order-system-policy \
+            ttl=1h
 {{- end }}

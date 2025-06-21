@@ -14,7 +14,7 @@ spec:
       annotations:
         {{- if .Values.processingOrders.vault.enabled }}
         vault.security.banzaicloud.io/vault-addr: "http://vault:8200"
-        vault.security.banzaicloud.io/vault-path: "{{ .Values.processingOrders.vault.path }}"
+        vault.security.banzaicloud.io/vault-path: "secret/{{ .Values.processingOrders.vault.path }}"
         vault.security.banzaicloud.io/vault-role: "{{ .Values.processingOrders.vault.role }}"
         vault.security.banzaicloud.io/vault-skip-verify: "true"
         {{- end }}
@@ -33,6 +33,10 @@ spec:
           value: "http://+:80"
         - name: Kafka__BootstrapServers
           value: "kafka:19092"
+        - name: Kafka__OrdersTopic
+          value: "orders"
+        - name: Kafka__OrdersDiscountTopic
+          value: "orders-discounts"
         {{- if .Values.processingOrders.vault.enabled }}
         - name: ConnectionStrings__OrdersDb
           value: "vault:order-system/data/processing-orders#ConnectionStrings.OrdersDb"
@@ -47,11 +51,27 @@ spec:
             path: /health/ready
             port: 80
           initialDelaySeconds: 5
+        {{- with .Values.processingOrders.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
   {{- if .Values.processingOrders.rollout.enabled }}
   strategy:
     canary:
-      {{- toYaml .Values.processingOrders.rollout.strategy.canary | nindent 6 }}
       canaryService: processing-orders-api-canary
       stableService: processing-orders-api-stable
+      {{- with .Values.processingOrders.rollout.strategy.canary.steps }}
+      steps:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      analysis:
+        templates:
+        - templateName: success-rate
+        args:
+        - name: service-name
+          value: processing-orders-api
+        startingStep: 1
+        successfulRunHistoryLimit: 5
+        unsuccessfulRunHistoryLimit: 3
   {{- end }}
 {{- end }}

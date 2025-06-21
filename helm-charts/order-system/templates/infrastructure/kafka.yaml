@@ -27,7 +27,7 @@ spec:
         - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
           value: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
         - name: KAFKA_ADVERTISED_LISTENERS
-          value: "PLAINTEXT_HOST://kafka:9092,PLAINTEXT://kafka:19092"
+          value: "PLAINTEXT_HOST://localhost:9092,PLAINTEXT://kafka:19092"
         - name: KAFKA_PROCESS_ROLES
           value: "broker,controller"
         - name: KAFKA_CONTROLLER_QUORUM_VOTERS

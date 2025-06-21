@@ -14,7 +14,7 @@ spec:
       annotations:
         {{- if .Values.mailings.vault.enabled }}
         vault.security.banzaicloud.io/vault-addr: "http://vault:8200"
-        vault.security.banzaicloud.io/vault-path: "order-system"
+        vault.security.banzaicloud.io/vault-path: "secret/order-system"
         vault.security.banzaicloud.io/vault-role: "order-system"
         vault.security.banzaicloud.io/vault-skip-verify: "true"
         {{- end }}
@@ -31,10 +31,28 @@ spec:
           value: "kafka:19092"
         - name: KAFKA_ORDERS_TOPIC
           value: "orders"
+        - name: KAFKA_ORDERS_DISCOUNT_TOPIC
+          value: "orders-discounts"
         - name: KAFKA_GROUP_ID
           value: "mailings-service"
         {{- if .Values.mailings.vault.enabled }}
         - name: POSTGRES_CONNECTION_STRING
           value: "vault:order-system/data/mailings#POSTGRES_CONNECTION_STRING"
+        {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        {{- with .Values.mailings.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
         {{- end }}
 {{- end }}
