@@ -1,14 +1,10 @@
-# Глобальные настройки
 global:
   namespace: order-system
   domain: local
   imageRegistry: docker.io
-  
-# Vault конфигурация
+
 vault:
   enabled: true
-  operator:
-    enabled: true
   server:
     dev:
       enabled: true
@@ -23,7 +19,6 @@ vault:
             - path: /
               pathType: Prefix
 
-# Prometheus мониторинг
 monitoring:
   prometheus:
     enabled: true
@@ -34,47 +29,36 @@ monitoring:
       className: nginx
       hosts:
         - grafana.local
-  
-  # Настройки для анализа метрик
   analysis:
     successRateThreshold: 0.95
     errorRateThreshold: 0.05
     interval: 30s
     failureLimit: 3
 
-# Argo Rollouts
 rollouts:
   enabled: true
   controller:
     metrics:
       enabled: true
 
-# Конфигурация микросервисов
 processingOrders:
   enabled: true
   image:
     repository: processing-orders-api
     tag: latest
     pullPolicy: IfNotPresent
-  
   replicaCount: 3
-  
   service:
     type: ClusterIP
     port: 80
-    
   ingress:
     enabled: true
     className: nginx
     host: processing-orders.local
-    
-  # Vault интеграция
   vault:
     enabled: true
     role: "order-system"
     path: "order-system"
-    
-  # Канареечный деплой
   rollout:
     enabled: true
     strategy:
@@ -113,7 +97,6 @@ promotions:
     className: nginx
     host: promotions.local
 
-# Инфраструктура
 kafka:
   enabled: true
   persistence:

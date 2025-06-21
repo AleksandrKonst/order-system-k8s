@@ -1,13 +1,13 @@
 apiVersion: v2
 name: order-system
-description: Система обработки заказов с микросервисами
+description: РЎРёСЃС‚РµРјР° РѕР±СЂР°Р±РѕС‚РєРё Р·Р°РєР°Р·РѕРІ СЃ РјРёРєСЂРѕСЃРµСЂРІРёСЃР°РјРё
 type: application
 version: 1.0.0
 appVersion: "1.0.0"
 
 dependencies:
   - name: vault
-    version: "0.24.0"  
+    version: "0.24.0"
     repository: "https://helm.releases.hashicorp.com"
     condition: vault.enabled
   
@@ -16,11 +16,6 @@ dependencies:
     repository: "https://prometheus-community.github.io/helm-charts"
     condition: monitoring.prometheus.enabled
   
-  - name: bank-vaults
-    version: "1.20.0"
-    repository: "https://kubernetes-charts.banzaicloud.com"
-    condition: vault.operator.enabled
-
   - name: argo-rollouts
     version: "2.32.0"
     repository: "https://argoproj.github.io/argo-helm"
