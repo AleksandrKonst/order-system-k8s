@@ -1,7 +1,7 @@
 global:
   namespace: order-system
   domain: local
-  imageRegistry: aleksandrkonst
+  imageRegistry: localhost:5000
 
 vault:
   enabled: true

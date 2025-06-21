@@ -17,7 +17,7 @@ spec:
         - values.yaml
       parameters:
         - name: global.imageRegistry
-          value: "aleksandrkonst"
+          value: "localhost:5000"
         - name: processingOrders.image.tag
           value: "latest"
         - name: mailings.image.tag  
@@ -43,4 +43,4 @@ spec:
       backoff:
         duration: 5s
         factor: 2
-                 maxDuration: 3m
+          maxDuration: 3m
